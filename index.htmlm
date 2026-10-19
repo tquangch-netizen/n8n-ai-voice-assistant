@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Voice Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      background-color: #000;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+
+    .orb-container {
+      position: relative;
+      margin: 30px;
+    }
+
+    .orb {
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle at 30% 30%, #00ffff, #004d4d);
+      border-radius: 50%;
+      box-shadow: 0 0 40px #00ffff88;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+    }
+
+    .ring {
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      box-shadow: 0 0 30px #00ffff55;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+    }
+
+    .orb.listening {
+      background: radial-gradient(circle at 30% 30%, #00ffcc, #005c5c);
+      box-shadow: 0 0 50px #00ffff;
+    }
+
+    .orb.playing {
+      background: radial-gradient(circle at 30% 30%, #ff00ff, #520052);
+      box-shadow: 0 0 50px #ff00ff99;
+    }
+
+    .ring.listening {
+      animation: vibrate 0.4s infinite;
+    }
+
+    .ring.playing {
+      animation: glow 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    @keyframes vibrate {
+      0% { transform: scale(1.05); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1.05); }
+    }
+
+    @keyframes glow {
+      0% { box-shadow: 0 0 40px #ff00ff88; }
+      100% { box-shadow: 0 0 60px #ff00ffcc; }
+    }
+
+    .status-text {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #aaa;
+    }
+
+    .transcript {
+      margin-top: 20px;
+      max-width: 500px;
+      padding: 0 20px;
+      color: #ddd;
+      line-height: 1.6;
+    }
+
+    .hint {
+      color: #777;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>AI Voice Assistant</h1>
+
+  <div class="orb-container">
+    <div id="ring" class="ring"></div>
+    <div id="orb" class="orb" title="Click to speak with AI"></div>
+  </div>
+
+  <div id="status" class="status-text">Click to speak</div>
+  <div class="hint">Click again to stop recording</div>
+  <div id="transcript" class="transcript"></div>
+
+  <script>
+    // Your n8n production webhook
+    const WEBHOOK_URL =
+      "https://marcus6635.app.n8n.cloud/webhook/process-audio";
+
+    const orb = document.getElementById('orb');
+    const ring = document.getElementById('ring');
+    const statusText = document.getElementById('status');
+    const transcriptDisplay = document.getElementById('transcript');
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    let recognition = null;
+    let isListening = false;
+    let isProcessing = false;
+    let lastTranscript = "";
+    let silenceTimeout = null;
+    let activeAudio = null;
+
+    function setStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function resetVisuals() {
+      orb.classList.remove('listening', 'playing');
+      ring.classList.remove('listening', 'playing');
+    }
+
+    function startRecognition() {
+      if (isProcessing) return;
+
+      if (!SpeechRecognition) {
+        setStatus("Speech recognition is not supported");
+        alert("Please use Chrome or another compatible browser.");
+        return;
+      }
+
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio = null;
+      }
+
+      clearTimeout(silenceTimeout);
+      lastTranscript = "";
+      transcriptDisplay.textContent = "";
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = true;
+      recognition.continuous = true;
+
+      recognition.onstart = () => {
+        isListening = true;
+        orb.classList.add('listening');
+        ring.classList.add('listening');
+        setStatus("Listening...");
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const text = event.results[i][0].transcript;
+
+          if (event.results[i].isFinal) {
+            lastTranscript += text + " ";
+          } else {
+            interimTranscript += text;
+          }
+        }
+
+        transcriptDisplay.textContent =
+          "You: " + lastTranscript + interimTranscript;
+
+        clearTimeout(silenceTimeout);
+
+        silenceTimeout = setTimeout(() => {
+          stopRecognition();
+        }, 1800);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        clearTimeout(silenceTimeout);
+        isListening = false;
+        resetVisuals();
+        setStatus("Microphone error: " + event.error);
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        resetVisuals();
+      };
+
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error(error);
+        setStatus("Unable to start microphone");
+      }
+    }
+
+    async function stopRecognition() {
+      if (!recognition || isProcessing) return;
+
+      clearTimeout(silenceTimeout);
+      isListening = false;
+      isProcessing = true;
+
+      recognition.stop();
+      resetVisuals();
+
+      const question = lastTranscript.trim();
+
+      if (!question) {
+        isProcessing = false;
+        setStatus("No speech detected. Click to try again.");
+        return;
+      }
+
+      setStatus("Thinking...");
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            question: question
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("Server returned " + response.status);
+        }
+
+        const audioBlob = await response.blob();
+
+        if (!audioBlob.size) {
+          throw new Error("Empty audio response");
+        }
+
+        const audioURL = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioURL);
+        activeAudio = audio;
+
+        audio.onplay = () => {
+          orb.classList.add('playing');
+          ring.classList.add('playing');
+          setStatus("AI is speaking...");
+        };
+
+        audio.onended = () => {
+          resetVisuals();
+          setStatus("Click to speak");
+          isProcessing = false;
+          URL.revokeObjectURL(audioURL);
+          activeAudio = null;
+        };
+
+        audio.onerror = () => {
+          resetVisuals();
+          setStatus("Unable to play audio");
+          isProcessing = false;
+          URL.revokeObjectURL(audioURL);
+          activeAudio = null;
+        };
+
+        await audio.play();
+
+      } catch (error) {
+        console.error("Voice assistant error:", error);
+        resetVisuals();
+        setStatus("Error: " + error.message);
+        isProcessing = false;
+      }
+    }
+
+    orb.addEventListener('click', () => {
+      if (isProcessing) return;
+
+      if (isListening) {
+        stopRecognition();
+      } else {
+        startRecognition();
+      }
+    });
+  </script>
+
+</body>
+</html>
