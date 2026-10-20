@@ -1,312 +1,131 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>AI Voice Assistant</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinGuide AI | Financial Planner</title>
   <style>
-    body {
-      background-color: #000;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      text-align: center;
-    }
-
-    .orb-container {
-      position: relative;
-      margin: 30px;
-    }
-
-    .orb {
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle at 30% 30%, #00ffff, #004d4d);
-      border-radius: 50%;
-      box-shadow: 0 0 40px #00ffff88;
-      cursor: pointer;
-      position: relative;
-      z-index: 2;
-    }
-
-    .ring {
-      position: absolute;
-      top: -20px;
-      left: -20px;
-      width: 240px;
-      height: 240px;
-      border-radius: 50%;
-      box-shadow: 0 0 30px #00ffff55;
-      animation: pulse 2s infinite;
-      pointer-events: none;
-    }
-
-    .orb.listening {
-      background: radial-gradient(circle at 30% 30%, #00ffcc, #005c5c);
-      box-shadow: 0 0 50px #00ffff;
-    }
-
-    .orb.playing {
-      background: radial-gradient(circle at 30% 30%, #ff00ff, #520052);
-      box-shadow: 0 0 50px #ff00ff99;
-    }
-
-    .ring.listening {
-      animation: vibrate 0.4s infinite;
-    }
-
-    .ring.playing {
-      animation: glow 1s ease-in-out infinite alternate;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.6; }
-      50% { transform: scale(1.2); opacity: 1; }
-    }
-
-    @keyframes vibrate {
-      0% { transform: scale(1.05); }
-      50% { transform: scale(1.15); }
-      100% { transform: scale(1.05); }
-    }
-
-    @keyframes glow {
-      0% { box-shadow: 0 0 40px #ff00ff88; }
-      100% { box-shadow: 0 0 60px #ff00ffcc; }
-    }
-
-    .status-text {
-      margin-top: 20px;
-      font-size: 18px;
-      color: #aaa;
-    }
-
-    .transcript {
-      margin-top: 20px;
-      max-width: 500px;
-      padding: 0 20px;
-      color: #ddd;
-      line-height: 1.6;
-    }
-
-    .hint {
-      color: #777;
-      font-size: 14px;
-      margin-top: 10px;
-    }
+    :root { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0b1220; color: #e9f0fa; }
+    header { padding: 24px max(24px, calc((100vw - 1050px)/2)); border-bottom: 1px solid #27354b; display: flex; gap: 14px; align-items: center; }
+    .logo { background: #10b981; border-radius: 13px; padding: 12px; color: #071611; font-size: 26px; }
+    h1 { font-size: 24px; margin: 0; } p { color: #acbbd0; margin: 6px 0; }
+    main { max-width: 1050px; margin: 28px auto; padding: 0 18px 40px; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card, .chat { background: #152237; border: 1px solid #2c3c55; border-radius: 16px; padding: 20px; }
+    .card h2 { margin: 0 0 8px; font-size: 16px; }
+    .card p { font-size: 14px; line-height: 1.5; }
+    .chat { margin-top: 20px; }
+    .chat h2 { margin: 0 0 8px; font-size: 20px; }
+    #messages { height: 365px; overflow-y: auto; padding: 12px 4px; display: flex; flex-direction: column; gap: 12px; }
+    .message { max-width: 86%; padding: 12px 15px; border-radius: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .assistant { background: #26364e; align-self: flex-start; }
+    .user { background: #087e66; align-self: flex-end; }
+    form { display: flex; gap: 9px; margin-top: 12px; }
+    input { flex: 1; min-width: 0; padding: 14px; background: #0b1220; border: 1px solid #425670; border-radius: 10px; color: white; font-size: 15px; }
+    button { background: #12b981; color: #092018; font-weight: 700; border: none; border-radius: 10px; padding: 12px 18px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .suggestions button { background: #243650; color: #e5effb; border: 1px solid #354c69; font-size: 12px; font-weight: 500; }
+    #status { font-size: 12px; min-height: 18px; margin-top: 9px; }
+    footer { color: #8191a6; font-size: 12px; line-height: 1.5; margin-top: 18px; }
+    @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } header { padding: 20px; } form { flex-direction: column; } #messages { height: 50vh; } }
   </style>
 </head>
-
 <body>
-
-  <h1>AI Voice Assistant</h1>
-
-  <div class="orb-container">
-    <div id="ring" class="ring"></div>
-    <div id="orb" class="orb" title="Click to speak with AI"></div>
-  </div>
-
-  <div id="status" class="status-text">Click to speak</div>
-  <div class="hint">Click again to stop recording</div>
-  <div id="transcript" class="transcript"></div>
-
+  <header><div class="logo">$</div><div><h1>FinGuide AI</h1><p>Your personal financial planning assistant</p></div></header>
+  <main>
+    <section class="cards">
+      <div class="card"><h2>💰 Monthly Budget</h2><p>Ask FinGuide to read transactions, calculate expenses, and compare spending against your budget.</p></div>
+      <div class="card"><h2>🎯 Savings Goals</h2><p>Set savings targets, estimate monthly contributions, and review your progress.</p></div>
+      <div class="card"><h2>📈 Investment Learning</h2><p>Explore investing concepts, diversification, and risks. No automatic trading.</p></div>
+    </section>
+    <section class="chat" aria-label="Financial planner chat">
+      <h2>Chat with FinGuide</h2>
+      <p>Ask about your budget, financial goals, or financial concepts.</p>
+      <div id="messages" role="log" aria-live="polite">
+        <div class="message assistant">Hello! I'm FinGuide. How can I help you plan your finances today?</div>
+      </div>
+      <form id="chatForm">
+        <input id="question" type="text" autocomplete="off" maxlength="1500" placeholder="Ask about your budget..." aria-label="Your message" required />
+        <button id="sendButton" type="submit">Send</button>
+      </form>
+      <div id="status" role="status"></div>
+      <div class="suggestions">
+        <button type="button" data-question="Read my transactions and summarize my expenses.">Review spending</button>
+        <button type="button" data-question="Help me create a monthly budget plan.">Create a budget</button>
+        <button type="button" data-question="How can I save $6,000 over 12 months?">Savings goal</button>
+      </div>
+    </section>
+    <footer>Educational prototype. Use fictional financial data for a public demo. Never enter banking passwords or account numbers. Financial information is not personalized investment advice.</footer>
+  </main>
   <script>
-    // Your n8n production webhook
-    const WEBHOOK_URL =
-      "https://marcus6635.app.n8n.cloud/webhook/process-audio";
+    // Paste the Production URL shown in your n8n "When chat message received" node.
+    // Enable Embedded Chat and set its allowed origin to your GitHub Pages origin.
+    const N8N_CHAT_URL = "PASTE_YOUR_N8N_CHAT_PRODUCTION_URL_HERE";
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('chatForm');
+    const question = document.getElementById('question');
+    const button = document.getElementById('sendButton');
+    const status = document.getElementById('status');
 
-    const orb = document.getElementById('orb');
-    const ring = document.getElementById('ring');
-    const statusText = document.getElementById('status');
-    const transcriptDisplay = document.getElementById('transcript');
+    // Unique to this browser tab; no financial data is stored locally.
+    const sessionId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    let recognition = null;
-    let isListening = false;
-    let isProcessing = false;
-    let lastTranscript = "";
-    let silenceTimeout = null;
-    let activeAudio = null;
-
-    function setStatus(message) {
-      statusText.textContent = message;
+    function addMessage(text, role) {
+      const el = document.createElement('div');
+      el.className = 'message ' + role;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
     }
 
-    function resetVisuals() {
-      orb.classList.remove('listening', 'playing');
-      ring.classList.remove('listening', 'playing');
+    function extractAnswer(data) {
+      const item = Array.isArray(data) ? data[0] : data;
+      if (typeof item === 'string') return item;
+      if (item && typeof item.output === 'string') return item.output;
+      if (item && typeof item.text === 'string') return item.text;
+      if (item && typeof item.response === 'string') return item.response;
+      if (item && typeof item.message === 'string') return item.message;
+      throw new Error('The n8n response has an unexpected format. Check the Chat Trigger execution output.');
     }
 
-    function startRecognition() {
-      if (isProcessing) return;
-
-      if (!SpeechRecognition) {
-        setStatus("Speech recognition is not supported");
-        alert("Please use Chrome or another compatible browser.");
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = question.value.trim();
+      if (!input) return;
+      if (N8N_CHAT_URL.startsWith('PASTE_')) {
+        status.textContent = 'Set your n8n Chat Trigger Production URL in index.html first.';
         return;
       }
-
-      if (activeAudio) {
-        activeAudio.pause();
-        activeAudio = null;
-      }
-
-      clearTimeout(silenceTimeout);
-      lastTranscript = "";
-      transcriptDisplay.textContent = "";
-
-      recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = true;
-      recognition.continuous = true;
-
-      recognition.onstart = () => {
-        isListening = true;
-        orb.classList.add('listening');
-        ring.classList.add('listening');
-        setStatus("Listening...");
-      };
-
-      recognition.onresult = (event) => {
-        let interimTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const text = event.results[i][0].transcript;
-
-          if (event.results[i].isFinal) {
-            lastTranscript += text + " ";
-          } else {
-            interimTranscript += text;
-          }
-        }
-
-        transcriptDisplay.textContent =
-          "You: " + lastTranscript + interimTranscript;
-
-        clearTimeout(silenceTimeout);
-
-        silenceTimeout = setTimeout(() => {
-          stopRecognition();
-        }, 1800);
-      };
-
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
-        clearTimeout(silenceTimeout);
-        isListening = false;
-        resetVisuals();
-        setStatus("Microphone error: " + event.error);
-      };
-
-      recognition.onend = () => {
-        isListening = false;
-        resetVisuals();
-      };
-
+      addMessage(input, 'user');
+      question.value = '';
+      button.disabled = true;
+      status.textContent = 'FinGuide is thinking...';
       try {
-        recognition.start();
-      } catch (error) {
-        console.error(error);
-        setStatus("Unable to start microphone");
-      }
-    }
-
-    async function stopRecognition() {
-      if (!recognition || isProcessing) return;
-
-      clearTimeout(silenceTimeout);
-      isListening = false;
-      isProcessing = true;
-
-      recognition.stop();
-      resetVisuals();
-
-      const question = lastTranscript.trim();
-
-      if (!question) {
-        isProcessing = false;
-        setStatus("No speech detected. Click to try again.");
-        return;
-      }
-
-      setStatus("Thinking...");
-
-      try {
-        const response = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            question: question
-          })
+        const response = await fetch(N8N_CHAT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sendMessage', sessionId, chatInput: input })
         });
-
-        if (!response.ok) {
-          throw new Error("Server returned " + response.status);
-        }
-
-        const audioBlob = await response.blob();
-
-        if (!audioBlob.size) {
-          throw new Error("Empty audio response");
-        }
-
-        const audioURL = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioURL);
-        activeAudio = audio;
-
-        audio.onplay = () => {
-          orb.classList.add('playing');
-          ring.classList.add('playing');
-          setStatus("AI is speaking...");
-        };
-
-        audio.onended = () => {
-          resetVisuals();
-          setStatus("Click to speak");
-          isProcessing = false;
-          URL.revokeObjectURL(audioURL);
-          activeAudio = null;
-        };
-
-        audio.onerror = () => {
-          resetVisuals();
-          setStatus("Unable to play audio");
-          isProcessing = false;
-          URL.revokeObjectURL(audioURL);
-          activeAudio = null;
-        };
-
-        await audio.play();
-
-      } catch (error) {
-        console.error("Voice assistant error:", error);
-        resetVisuals();
-        setStatus("Error: " + error.message);
-        isProcessing = false;
-      }
-    }
-
-    orb.addEventListener('click', () => {
-      if (isProcessing) return;
-
-      if (isListening) {
-        stopRecognition();
-      } else {
-        startRecognition();
+        if (!response.ok) throw new Error('n8n returned HTTP ' + response.status);
+        const payload = await response.json();
+        addMessage(extractAnswer(payload), 'assistant');
+        status.textContent = '';
+      } catch (err) {
+        status.textContent = 'Connection problem: ' + err.message;
+        addMessage('I could not retrieve an answer. Please check the n8n workflow and its executions.', 'assistant');
+      } finally {
+        button.disabled = false;
+        question.focus();
       }
     });
-  </script>
 
+    document.querySelectorAll('[data-question]').forEach(el => {
+      el.addEventListener('click', () => { question.value = el.dataset.question; question.focus(); });
+    });
+  </script>
 </body>
 </html>
