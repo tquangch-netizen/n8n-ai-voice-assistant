@@ -1,40 +1,47 @@
-# n8n-ai-voice-assistant
-My AI Voice Assistant powered by n8n
+# FinGuide AI — Financial Planning Agent
 
-# AI Voice Assistant using n8n
+FinGuide AI is a text-based financial planning assistant built using n8n, OpenAI, and Google Sheets.
 
-An AI voice assistant built using n8n and OpenAI.
+## Project Overview
 
-## Live Demo
+FinGuide helps users understand their spending, manage a monthly budget, and work toward financial goals.
 
-[Try the AI Voice Assistant](https://tquangch-netizen.github.io/n8n-ai-voice-assistant/)
+## Main Features
 
-## How It Works
+- **AI Financial Assistant:** Answers questions about budgeting, savings, and basic investment concepts.
+- **Expense Tracking:** Reads and records transactions in Google Sheets.
+- **Budget Planning:** Helps users compare spending against their planned budget.
+- **Financial Calculations:** Calculates expenses and savings targets.
+- **Conversation Memory:** Remembers previous messages within a chat session.
 
-1. User speaks through a microphone.
-2. Browser converts speech into text.
-3. n8n receives the question through a webhook.
-4. AI Agent processes the question.
-5. OpenAI converts the response into speech.
-6. The browser plays the AI-generated voice.
+## How the Workflow Works
 
-## n8n Workflow
+1. A user sends a message through the n8n Chat Trigger.
+2. The AI Agent understands the question.
+3. The agent uses Google Sheets or Calculator tools when needed.
+4. The AI returns a written financial explanation or suggested action.
 
-[Download n8n Workflow JSON](./AI-Voice-Assistant-Workflow.json)
+## Technologies
 
-## Technologies Used
+- n8n — workflow automation
+- OpenAI GPT-4o-mini — AI model
+- Google Sheets — financial records
+- Calculator — financial calculations
 
-- n8n
-- OpenAI GPT-4o-mini
-- OpenAI Text-to-Speech
-- JavaScript and HTML
-- GitHub Pages
+## Workflow File
 
-## How to Run
+[Download the FinGuide AI n8n Workflow](./FinGuide-AI-Workflow.json)
 
-1. Download the workflow JSON file.
-2. Import it into n8n.
-3. Configure your own OpenAI API credentials.
-4. Update the webhook URL in index.html.
-5. Publish the workflow.
-6. Open the voice assistant webpage and test it.
+Import the JSON file into n8n and configure your own API credentials and Google Sheets document before testing.
+
+## Future Improvements
+
+- Savings goal tracking
+- Excel workbook export
+- Financial dashboard and charts
+- Stronger approval controls for editing transactions
+- Investment scenario planning
+
+## Important Note
+
+FinGuide is an educational financial planning prototype. It does not execute investments or provide guaranteed financial returns. Use fictional financial data when testing the public demonstration.
